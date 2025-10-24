@@ -40,8 +40,9 @@ def PCA_analysis(quantity=5):
     # plt.title('Вклад признаков в первую главную компоненту (PCA)')
     # plt.gca().invert_yaxis()
     # plt.tight_layout()
-    # # plt.savefig("importance_PCA.jpg", dpi=500)
+    # # plt.savefig((path_dir / "graphics\\importance_PCA.jpg"), dpi=500)
     # plt.show()
+    print("PCA:", importance_df['feature'].values[:quantity])
     return importance_df['feature'].values[:quantity]
 
 
@@ -51,8 +52,8 @@ def AVG_analysis(quantity=5):
     model_y = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=-1)
 
     # Обучение
-    model_x.fit(X, y["true_dx"])
-    model_y.fit(X, y["true_dy"])
+    model_x.fit(X, y["deviation_dx"])
+    model_y.fit(X, y["deviation_dy"])
 
     # Получаем важности
     importance_x = model_x.feature_importances_
@@ -77,8 +78,9 @@ def AVG_analysis(quantity=5):
     # plt.title('Влияние признаков на ошибку измерения смещения')
     # plt.gca().invert_yaxis()  # Самый важный — сверху
     # plt.tight_layout()
-    # plt.savefig("importance_avg.jpg", dpi=500)
+    # # plt.savefig((path_dir / "graphics\\importance_avg.jpg"), dpi=500)
     # plt.show()
+    print("AVG:", top_features['feature'].values[:quantity])
     return top_features['feature'].values[:quantity]
 
 
@@ -121,19 +123,19 @@ def SBS_analysis():
     # plt.title('Важность признаков для предсказания ошибки смещения')
     # plt.gca().invert_yaxis()
     # plt.tight_layout()
-    # # plt.savefig("importance_SBS.jpg", dpi=500)
+    # # plt.savefig((path_dir / "graphics\\importance_SBS.jpg"), dpi=500)
     # plt.show()
     sbs = SelectFromModel(RandomForestRegressor(n_estimators=200, random_state=42), threshold=0.01)
     sbs.fit(X_train, y_train)
-    print(len(sbs.get_feature_names_out()))
+    print("SBS:", sbs.get_feature_names_out())
     return sbs.get_feature_names_out()
 
 
 def tolerance_window(all_data, coef = 1.5):
     """Функция отсеивает выбросы, которые выходят за рамки окна диапазонов истинных значений 
         и возвращает новый DataFrame."""
-    min_shift = all_data["true_dx"].min() * coef if all_data["true_dx"].min() != 0 else -1
-    max_shift = all_data["true_dx"].max() * coef if all_data["true_dx"].max() != 0 else 1
+    min_shift = all_data["true_dx"].min() - coef
+    max_shift = all_data["true_dx"].max() + coef
     new_data = all_data.loc[(all_data["dx"] < max_shift)
                             & (all_data["dy"] < max_shift)
                             & (all_data["dx"] > min_shift)
@@ -146,18 +148,7 @@ def tolerance_window(all_data, coef = 1.5):
 def measurement_deviations(all_data, coef = 1.5):
     """Функция отсеивает выбросы индивидуально, сравнивая предсказанные значения (dx, dy) с (true_dx, true_dy).
         Возвращает новый DataFrame состоящий только из полей с разницей предсказанных и истинных
-        значений < чем в 'coef' раз."""
-    # # Отбор полей со значениями dx, dy большими, чем true в coef раз
-    # emis_corr_data = all_data.loc[((all_data["dx"] > all_data["true_dx"] * coef) & (all_data["true_dx"] >= 0))
-    #                             | ((all_data["dy"] > all_data["true_dy"] * coef) & (all_data["true_dy"] >= 0))
-    #                             | ((all_data["dx"] < all_data["true_dx"] * coef) & (all_data["true_dx"] <= 0))
-    #                             | ((all_data["dy"] < all_data["true_dy"] * coef) & (all_data["true_dy"] <= 0))]
-    # # Отбор  полей с отклонением больше чем на 1 пиксель при true=0
-    # emis_corr_data = emis_corr_data.loc[((emis_corr_data["true_dx"] != 0) & (emis_corr_data["true_dy"] != 0))
-    #             | ((emis_corr_data["true_dx"] == 0) & ((emis_corr_data["dx"] > 1) | (emis_corr_data["dx"] < -1)))
-    #             | ((emis_corr_data["true_dy"] == 0) & ((emis_corr_data["dy"] > 1) | (emis_corr_data["dy"] < -1)))]
-    # print("Процент выбросов корреляционного метода индивид.:", round(emis_corr_data.shape[0] / len(all_data) * 100, 2), "%")
-    
+        значений в диапазоне [true_dx - coef, true_dx + coef] (для dy аналогично)."""
     if coef <= 0:
         raise ValueError("coef должен быть положительным")
     if coef < 1:
@@ -167,33 +158,33 @@ def measurement_deviations(all_data, coef = 1.5):
 
     # --- Обработка dx ---
     # Границы по умолчанию (для ненулевых true_dx)
-    low_dx = df['true_dx'] / coef
-    high_dx = df['true_dx'] * coef
+    low_dx = df['true_dx'] - coef
+    high_dx = df['true_dx'] + coef
 
-    # Упорядочиваем границы (на случай отрицательных значений)
-    dx_min = np.minimum(low_dx, high_dx)
-    dx_max = np.maximum(low_dx, high_dx)
+    # # Упорядочиваем границы (на случай отрицательных значений)
+    # dx_min = np.minimum(low_dx, high_dx)
+    # dx_max = np.maximum(low_dx, high_dx)
 
-    # Замена границ для строк, где true_dx == 0
-    zero_dx_mask = (df['true_dx'] == 0)
-    dx_min = np.where(zero_dx_mask, -1.0, dx_min)
-    dx_max = np.where(zero_dx_mask,  1.0, dx_max)
+    # # Замена границ для строк, где true_dx == 0
+    # zero_dx_mask = (df['true_dx'] == 0)
+    # dx_min = np.where(zero_dx_mask, -1.0, dx_min)
+    # dx_max = np.where(zero_dx_mask,  1.0, dx_max)
 
     # --- Обработка dy ---
-    low_dy = df['true_dy'] / coef
-    high_dy = df['true_dy'] * coef
+    low_dy = df['true_dy'] - coef
+    high_dy = df['true_dy'] + coef
 
-    dy_min = np.minimum(low_dy, high_dy)
-    dy_max = np.maximum(low_dy, high_dy)
+    # dy_min = np.minimum(low_dy, high_dy)
+    # dy_max = np.maximum(low_dy, high_dy)
 
-    zero_dy_mask = (df['true_dy'] == 0)
-    dy_min = np.where(zero_dy_mask, -1.0, dy_min)
-    dy_max = np.where(zero_dy_mask,  1.0, dy_max)
+    # zero_dy_mask = (df['true_dy'] == 0)
+    # dy_min = np.where(zero_dy_mask, -1.0, dy_min)
+    # dy_max = np.where(zero_dy_mask,  1.0, dy_max)
 
     # --- Фильтрация ---
     mask = (
-        (df['dx'] >= dx_min) & (df['dx'] <= dx_max) &
-        (df['dy'] >= dy_min) & (df['dy'] <= dy_max)
+        (df['dx'] >= low_dx) & (df['dx'] <= high_dx) &
+        (df['dy'] >= low_dy) & (df['dy'] <= high_dy)
     )
     error_percent = round((1 - df[mask].shape[0] / len(all_data)) * 100, 2)
     print("Процент выбросов корреляционного метода индивид.:", error_percent, "%")
@@ -211,7 +202,7 @@ def get_deviation_data(all_data, clear_data):
 path_dir = Path(path[0])
 
 all_data = pd.read_csv((path_dir / "combined_data.csv"))
-coef = 1.2
+coef = 1
 
 
 # Получение всех отфильтрованных измерений для анализа
@@ -222,14 +213,15 @@ coef = 1.2
 # window_err = get_deviation_data(all_data=all_data, clear_data=all_data_window)
 # emiss_err = get_deviation_data(all_data=all_data, clear_data=emis_corr_data)
 
+# all_data, _ = tolerance_window(all_data, coef)
 
-X = all_data.loc[:, all_data.columns[:-2]]
-y = all_data.loc[:, all_data.columns[-2:]]
+feature_columns = [col for col in all_data.columns if col not in {'true_dx', 'true_dy'}]
+y = all_data.loc[:, feature_columns[-2:]]
+X = all_data.loc[:, feature_columns[:-2]]
 
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
+test_index = list(y_test.index)
 
 # scaler_X = StandardScaler()
 # X_train = scaler_X.fit_transform(X_train)
@@ -245,93 +237,124 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 
 
 
-X_train_clear = pd.DataFrame(X_train, columns=X.columns).loc[:, SBS_analysis()]
-X_test_clear = pd.DataFrame(X_test, columns=X.columns).loc[:, SBS_analysis()]
-model_forest = MultiOutputRegressor(RandomForestRegressor(n_estimators=100, random_state=42))
-model_forest.fit(X_train_clear, y_train)
-y_pred = model_forest.predict(X_test_clear)
+# X_train_clear = pd.DataFrame(X_train, columns=X.columns).loc[:, SBS_analysis()]
+# X_test_clear = pd.DataFrame(X_test, columns=X.columns).loc[:, SBS_analysis()]
+model_forest = MultiOutputRegressor(RandomForestRegressor(n_estimators=200, random_state=42))
+model_forest.fit(X_train, y_train)
+y_pred = model_forest.predict(X_test)
+# print(np.expand_dims(y_pred[:, 1], axis=0))
 
+# all_pred_data = pd.concat([X_test, pd.DataFrame(y_pred, columns=["deviation_dx", "deviation_dy"], index=X_test.index)], axis=1)
 
-all_pred_data = pd.concat([X_test, pd.DataFrame(y_pred, columns=["true_dx", "true_dy"], index=X_test.index)], axis=1)
+data = X_test.copy()
+data.insert(3, "true_dx", all_data.loc[test_index, "true_dx"])
+data.insert(4, "true_dy", all_data.loc[test_index, "true_dy"])
+
+# Добавление поправки к смещениям
+data["dx"] = data["dx"] + y_pred[:, 0]
+data["dy"] = data["dy"] + y_pred[:, 1]
 
 # Получение всех отфильтрованных измерений для анализа
-all_data_window, err_win = tolerance_window(all_pred_data, coef)
-emis_pred_data, err_emis = measurement_deviations(all_pred_data, coef)
+all_data_window, err_win = tolerance_window(data, coef)
+emis_data, err_emis = measurement_deviations(data, coef)
 
 # Получение всех ошибочных измерений для анализа
-window_err = get_deviation_data(all_data=all_pred_data, clear_data=all_data_window)
-emiss_err = get_deviation_data(all_data=all_pred_data, clear_data=emis_pred_data)
+window_err = get_deviation_data(all_data=data, clear_data=all_data_window)
+emiss_err = get_deviation_data(all_data=data, clear_data=emis_data)
+
+# # print(window_err.loc[:, ["dx", "dy", "true_dx", "true_dy"]])
 
 
-# PCA_analysis(15)
-# AVG_analysis(15)
+
+# PCA_analysis(10)
+AVG_analysis(10)
 # SBS_analysis()
 
 
-e_true = np.linalg.norm(y_test, axis=1)
-e_corr = np.linalg.norm([X_test["dx"].values, X_test["dy"].values], axis=0)
-e_pred = np.linalg.norm(y_pred, axis=1)
+# -----------------------------Анализ векторов смещения--------------------------------------------
 
-print(f"MAE фактическая:       {e_true.mean():.3f} px")
-print(f"MAE корреляционное:    {e_corr.mean():.3f} px")
-print(f"MAE предсказанное:     {e_pred.mean():.3f} px")
-print(f"Отклонение предсказ.:  {(e_true.mean() - e_pred.mean()):.3f} px ({(1 - e_pred.mean()/(e_true.mean() + 1e-8))*100:.1f}%)")
-print(f"Отклонение корреляц.:  {(e_true.mean() - e_corr.mean()):.3f} px ({(1 - e_corr.mean()/(e_true.mean() + 1e-8))*100:.1f}%)")
-print(f"Медианное смещение:    {np.median(e_true):.3f} px")
-print(f"Медиан. коррел. смещ.: {np.median(e_corr):.3f} px")
-print(f"Медиан. предск. смещ.: {np.median(e_pred):.3f} px\n")
+# true_vec = np.linalg.norm([all_data.loc[test_index, ["true_dx"]].values, 
+#                        all_data.loc[test_index, ["true_dy"]].values], axis=0)
+# e_corr_vec = np.linalg.norm([X_test["dx"].values, X_test["dy"].values], axis=0)
+# e_true_vec = np.linalg.norm(y_test, axis=1)
+# e_pred_vec = np.linalg.norm(y_pred, axis=1)
 
-print(pd.DataFrame(e_true, columns=["true"]).describe().transpose(), "\n")
-print(pd.DataFrame(e_corr, columns=["corr"]).describe().transpose(), "\n")
-print(pd.DataFrame(e_pred, columns=["pred"]).describe().transpose())
+# print(np.round(e_true[:20], 2), "\n")
+# print(np.round(e_corr[:20], 2), "\n")
+# print(np.round(true[:20].T, 2), "\n")
+# print(np.round(e_pred[:20], 2))
+
+# print(np.expand_dims(true.flatten(), axis=0).T.shape, 
+#       np.expand_dims(e_corr, axis=0).T.shape, 
+#       np.expand_dims(e_pred, axis=0).T.shape, 
+#       np.expand_dims(e_true, axis=0).T.shape)
+
+# result_vectors = pd.DataFrame(np.concat((
+#                         np.expand_dims(true_vec.flatten(), axis=0).T, 
+#                         np.expand_dims(e_corr_vec, axis=0).T, 
+#                         np.expand_dims(e_true_vec, axis=0).T, 
+#                         np.expand_dims(e_pred_vec, axis=0).T), axis=1),
+#                         index=X_test.index, 
+#                         columns=["true_vector", "corr_vector", "true_dev", "pred_dev"])
+# print(result_vectors)
+
+#----------------------------------------------------------------------------------------------------------
+
+shifts = all_data.loc[test_index, ["true_dx", "true_dy", "dx", "dy"]].values
+result = round(pd.DataFrame(np.concat((shifts, y_test, y_pred), axis=1),
+                        index=X_test.index, 
+                        columns=["true_dx", "true_dy", "corr_dx", "corr_dy", "true_dev_dx", 
+                                 "true_dev_dy", "pred_dev_dx", "pred_dev_dy"]), 3)
+# csv_path = Path(path[0] + "\\result_data.csv")
+# result.to_csv(csv_path, index=False, encoding='utf8')
 
 
-# fig = plt.figure(figsize=(12, 6))
-# axs = fig.subplots(1, 4)
-# # axs[0].scatter(X_test[:, 1], X_test[:, 2])
-# axs[0].scatter(X_test["dx"].values, X_test["dy"].values)
-# axs[0].set(title="Correlate")
-# axs[3].scatter(y_test["true_dx"].values, y_test["true_dy"].values)
-# axs[3].set(title="True")
-# axs[2].scatter(y_pred[:, 0], y_pred[:, 1])
-# axs[2].set(title="Prediction")
-# axs[1].scatter(emis_corr_data["dx"].values, emis_corr_data["dy"].values)
-# axs[1].set(title=f"Откл. от истинных в {coef} раз")
-# plt.show()
+# print(f"MAE фактическая:       {e_true.mean():.3f} px")
+# print(f"MAE корреляционное:    {e_corr.mean():.3f} px")
+# print(f"MAE предсказанное:     {e_pred.mean():.3f} px")
+# print(f"Отклонение предсказ.:  {(e_true.mean() - e_pred.mean()):.3f} px ({(1 - e_pred.mean()/(e_true.mean() + 1e-8))*100:.1f}%)")
+# print(f"Отклонение корреляц.:  {(e_true.mean() - e_corr.mean()):.3f} px ({(1 - e_corr.mean()/(e_true.mean() + 1e-8))*100:.1f}%)")
+# print(f"Медианное смещение:    {np.median(e_true):.3f} px")
+# print(f"Медиан. коррел. смещ.: {np.median(e_corr):.3f} px")
+# print(f"Медиан. предск. смещ.: {np.median(e_pred):.3f} px\n")
 
-
-
-
-# Отрисовка данных предсказаний
-fig = plt.figure(figsize=(12, 6))
-axs = fig.subplots(1, 4)
-axs[0].scatter(all_data_window["dx"].values, all_data_window["dy"].values)
-axs[0].set(title=f"Test with window")
-axs[1].scatter(window_err["dx"].values, window_err["dy"].values)
-axs[1].set(title=f"window. Ошибка {err_win}%")  # , xlim=[-1, 1], ylim=[-1, 1]
-axs[2].scatter(emis_pred_data["dx"].values, emis_pred_data["dy"].values)
-axs[2].set(title=f"Emission")
-axs[3].scatter(emiss_err["dx"].values, emiss_err["dy"].values)
-axs[3].set(title=f"Emisson error. Ошибка {err_emis}%")
-# plt.savefig("all_data_corr.jpg")
-plt.show()
+# print(pd.DataFrame(e_true, columns=["true"]).describe().transpose(), "\n")
+# print(pd.DataFrame(e_corr, columns=["corr"]).describe().transpose(), "\n")
+# print(pd.DataFrame(e_pred, columns=["pred"]).describe().transpose())
 
 
 
 # # Отрисовка данных корреляции
-# fig = plt.figure(figsize=(12, 6))
+# fig = plt.figure(figsize=(14, 6))
 # axs = fig.subplots(1, 4)
 # axs[0].scatter(all_data_window["dx"].values, all_data_window["dy"].values)
-# axs[0].set(title=f"Corr with window")
+# axs[0].set(title=f"ML Corr with window", xlim=[-30, 30], ylim=[-30, 30])
 # axs[1].scatter(window_err["dx"].values, window_err["dy"].values)
-# axs[1].set(title=f"window. Ошибка {err_win}%")  # , xlim=[-1, 1], ylim=[-1, 1]
-# axs[2].scatter(emis_corr_data["dx"].values, emis_corr_data["dy"].values)
-# axs[2].set(title=f"Emission")
+# axs[1].set(title=f"ML window. Ошибка {err_win}%", xlim=[-30, 30], ylim=[-30, 30])  # , xlim=[-30, 30], ylim=[-30, 30]
+# axs[2].scatter(emis_data["dx"].values, emis_data["dy"].values)
+# axs[2].set(title=f"ML Emission", xlim=[-30, 30], ylim=[-30, 30])
 # axs[3].scatter(emiss_err["dx"].values, emiss_err["dy"].values)
-# axs[3].set(title=f"Emisson error. Ошибка {err_emis}%")
-# # plt.savefig("all_data_corr.jpg")
+# axs[3].set(title=f"ML Emisson error. Ошибка {err_emis}%", xlim=[-30, 30], ylim=[-30, 30])
+# # axs[4].scatter(all_data["true_dx"].values, all_data["true_dy"].values)
+# # axs[4].set(title=f"True", xlim=[-30, 30], ylim=[-30, 30])
+# # plt.savefig((path_dir / "graphics\\ML_SBS.jpg"), dpi=800)
 # plt.show()
 
+
+
+
+# print(all_data.loc[list(X_test.index)[:-1], ["true_dx"]])
+
+# fig = plt.figure()
+# axs = fig.subplots(1, 3)
+# axs[0].scatter(all_data.loc[list(X_test.index)[:-1], ["true_dx"]].values, 
+#                all_data.loc[list(X_test.index)[:-1], ["true_dy"]].values)
+# axs[0].set(title=f"True", xlim=[-30, 30], ylim=[-30, 30])   # , xlim=[-30, 30], ylim=[-30, 30]
+# axs[1].scatter(X_test["dx"].values, X_test["dy"].values)
+# axs[1].set(title=f"Corr", xlim=[-30, 30], ylim=[-30, 30])
+# axs[2].scatter(X_test["dx"].values + y_pred[:, 0], X_test["dy"].values + y_pred[:, 0])
+# axs[2].set(title=f"Pred", xlim=[-30, 30], ylim=[-30, 30])
+# plt.show()
 
 # --------------------------------------------------------------------------------------------------
 

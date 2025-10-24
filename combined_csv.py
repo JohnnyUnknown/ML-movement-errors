@@ -30,11 +30,26 @@ for file in os.listdir(ANGLES_DIR):
             
         df_features = df[feature_columns].copy()
 
-        # Перенос целевых столбцов в конец таблицы с отрицательным знаком
-        dx = df_features.pop("true_dx")
-        dy = df_features.pop("true_dy")
-        df_features.insert(len(df_features.columns), "true_dx", -dx)
-        df_features.insert(len(df_features.columns), "true_dy", -dy)
+        # # Изменение знака из-за особенностей метода cv2.phaseCorrelate
+        # df_features["true_dx"] = df_features["true_dx"] * (-1)
+        # df_features["true_dy"] = df_features["true_dy"] * (-1)
+        
+        # Нахождение отклонений измеренных значений от истинных
+        deviation_dx = round(df_features["true_dx"].abs() - df_features["dx"].abs(), 3)
+        deviation_dy = round(df_features["true_dy"].abs() - df_features["dy"].abs(), 3)
+
+        # Формирование таргетных столбцов
+        df_features.insert(len(df_features.columns), "deviation_dx", deviation_dx)
+        df_features.insert(len(df_features.columns), "deviation_dy", deviation_dy)
+
+        df_features.loc[df_features['true_dx'] < 0, 'deviation_dx'] *= -1
+        df_features.loc[df_features['true_dy'] < 0, 'deviation_dy'] *= -1
+        df_features.loc[((df_features['true_dx'] == 0) & (df_features['dx'] < 0)), 
+                       'deviation_dx'] = df_features.loc[((df_features['true_dx'] == 0) & (df_features['dx'] < 0)), 
+                                                            'deviation_dx'].abs()
+        df_features.loc[((df_features['true_dy'] == 0) & (df_features['dy'] < 0)), 
+                        'deviation_dy'] = df_features.loc[((df_features['true_dy'] == 0) & (df_features['dy'] < 0)), 
+                                                            'deviation_dy'].abs()
         
         dataframes.append(df_features)
 
@@ -44,6 +59,8 @@ else:
     all_data = pd.DataFrame(columns=columns)
     
 all_data.fillna(0, inplace=True)
+
+print(all_data)
 
 csv_path = Path(path[0] + "\\combined_data.csv")
 all_data.to_csv(csv_path, index=False, encoding='utf8')

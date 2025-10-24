@@ -12,6 +12,7 @@ import piq
 
 
 ANGLES_DIR = path[0] + "\\angles"
+img_size = (256, 256)
 
 
 def compute_quality_metrics(ref_img, curr_img):
@@ -144,35 +145,6 @@ def compute_derivatives(results):
 
     return results
 
-# def fast_logpolar_phasecorrelate(ref_img, curr_img):
-#     """
-#     Возвращает dx, dy и угол поворота между ref_img и curr_img
-#     Использует log-polar + phase correlation для оценки угла
-#     """
-#     # Преобразуем в float32
-#     ref_f = np.float32(ref_img)
-#     curr_f = np.float32(curr_img)
-
-#     # Центр изображения
-#     center = (ref_img.shape[1]//2, ref_img.shape[0]//2)
-
-#     # Log-polar преобразование
-#     M = 40  # масштаб, можно подбирать
-#     ref_lp = cv2.logPolar(ref_f, center, M, cv2.INTER_LINEAR + cv2.WARP_FILL_OUTLIERS)
-#     curr_lp = cv2.logPolar(curr_f, center, M, cv2.INTER_LINEAR + cv2.WARP_FILL_OUTLIERS)
-
-#     # Phase correlation для угла
-#     (dx_lp, dy_lp), response_angle = cv2.phaseCorrelate(ref_lp, curr_lp)
-#     angle = dx_lp * 360.0 / ref_lp.shape[1]  # градусы
-
-#     # Повернем текущее изображение на найденный угол
-#     rot_matrix = cv2.getRotationMatrix2D(center, -angle, 1.0)
-#     curr_rot = cv2.warpAffine(curr_img, rot_matrix, (curr_img.shape[1], curr_img.shape[0]))
-
-#     # Phase correlation для XY смещения
-#     (dx, dy), response_shift = cv2.phaseCorrelate(np.float32(ref_img), np.float32(curr_rot))
-
-#     return dx, dy, angle, response_shift
 
 def main():
     for root, dirs, files in os.walk(ANGLES_DIR):
@@ -184,7 +156,11 @@ def main():
             print(f"⚠️ Пропущена папка {root}: не найдено 0p0_0p0_0p0.jpg")
             continue
 
+        hann = cv2.createHanningWindow(img_size, cv2.CV_32F)
+
         ref_img = cv2.imread(ref_path, cv2.IMREAD_GRAYSCALE)
+        ref_img = cv2.normalize(ref_img, None, 0, 255, cv2.NORM_MINMAX)
+
         if ref_img is None:
             print(f"❌ Не удалось загрузить {ref_path}")
             continue
@@ -195,6 +171,8 @@ def main():
             img_path = os.path.join(root, file)
 
             curr_img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+            curr_img = cv2.normalize(curr_img, None, 0, 255, cv2.NORM_MINMAX)
+
             if curr_img is None:
                 print(f"❌ Не удалось загрузить {img_path}")
                 continue
@@ -208,7 +186,8 @@ def main():
             try:
                 (dx, dy), response = cv2.phaseCorrelate(
                             np.float32(ref_img),
-                            np.float32(curr_img)
+                            np.float32(curr_img),
+                            hann
                             )
                 
                 true_dx, true_dy, angle = parse_shift_angle_from_filename(file)
@@ -252,8 +231,8 @@ def main():
                     'angle': angle,
                     'dx': dx,
                     'dy': dy,
-                    "true_dx": true_dx,
-                    "true_dy": true_dy,
+                    "true_dx": true_dx if true_dx == 0 else -true_dx,
+                    "true_dy": true_dy if true_dy == 0 else -true_dy,
                     'response': response,
                     'contrast': contrast,
                     'entropy': entropy,
