@@ -6,7 +6,7 @@ from sys import path
 
 # Директории
 RAW_DIR = Path(path[0] + "\\raw")
-ANGLES_DIR = Path(path[0] + "\\angles")
+ANGLES_DIR = Path(path[0] + "\\angles\\images")
 
 # Параметры
 CROP_SIZE = 256

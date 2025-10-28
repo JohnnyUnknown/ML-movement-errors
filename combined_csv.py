@@ -7,7 +7,7 @@ from sys import path
 
 pd.options.mode.use_inf_as_na = True
 
-ANGLES_DIR = Path(path[0] + "\\angles")
+ANGLES_DIR = Path(path[0] + "\\angles\\parameters")
 columns = [
             'angle','dx','dy','true_dx','true_dy','response','contrast','entropy','gradient_energy','mean_brightness','median_brightness',
             'sharpness','dynamic_range','snr','motion_magnitude','delta_dx','delta_dy','delta_response','delta_entropy',
@@ -62,5 +62,5 @@ all_data.fillna(0, inplace=True)
 
 print(all_data)
 
-csv_path = Path(path[0] + "\\combined_data.csv")
+csv_path = Path(path[0] + "\\combined_data_shift.csv")
 all_data.to_csv(csv_path, index=False, encoding='utf8')

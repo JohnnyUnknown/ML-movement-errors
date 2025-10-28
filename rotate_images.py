@@ -6,10 +6,10 @@ from sys import path
 
 # Конфигурация
 RAW_DIR = Path(path[0] + "\\raw")
-ANGLES_DIR = Path(path[0] + "\\angles")
+ANGLES_DIR = Path(path[0] + "\\angles\\images")
 CROP_SIZE = 256
-ANGLE_START = -5.0
-ANGLE_END = 5.0
+ANGLE_START = -2.0
+ANGLE_END = 2.0
 ANGLE_STEP = 0.1
 ANGLES = int((abs(ANGLE_START) + ANGLE_END) / ANGLE_STEP + 1)
 

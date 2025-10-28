@@ -6,12 +6,12 @@ from sys import path
 
 # Директории
 RAW_DIR = Path(path[0] + "\\raw")
-ANGLES_DIR = Path(path[0] + "\\angles")
+ANGLES_DIR = Path(path[0] + "\\angles\\images")
 
 # Параметры
 CROP_SIZE = 256
 MAX_OFFSET = 15.0      # пикселей
-MAX_ANGLE = 5.0        # градусов
+MAX_ANGLE = 2.0        # градусов
 NUM_CROPS = 100
 
 # Поддерживаемые расширения

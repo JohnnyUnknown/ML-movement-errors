@@ -11,7 +11,8 @@ import piq
 
 
 
-ANGLES_DIR = path[0] + "\\angles"
+ANGLES_DIR = path[0] + "\\angles\\images"
+PARAMS_DIR = path[0] + "\\angles\\parameters"
 img_size = (256, 256)
 
 
@@ -56,23 +57,6 @@ def compute_quality_metrics(ref_img, curr_img):
     metrics['fsim'] = piq.fsim(ref_tensor, curr_tensor, data_range=1.0).item()
 
     return metrics
-
-# def normalize_results(results, fields):
-#     """Нормализует указанные поля в диапазон [-1, 1]"""
-#     for field in fields:
-#         values = np.array([r[field] for r in results], dtype=np.float32)
-#         min_val, max_val = np.min(values), np.max(values)
-
-#         if max_val == min_val:
-#             # Все значения одинаковы — ставим 0 (среднее)
-#             norm_values = np.zeros_like(values)
-#         else:
-#             norm_values = 2 * (values - min_val) / (max_val - min_val) - 1
-
-#         for i, r in enumerate(results):
-#             r[field] = float(norm_values[i])
-
-#     return results
 
 def parse_shift_angle_from_filename(filename):
     name, _ = os.path.splitext(filename)
@@ -248,21 +232,8 @@ def main():
                     'vif': quality_metrics['vif'],
                     'fsim': quality_metrics['fsim'],
                 })
-            
-        # metric_fields = [
-        #     'contrast', 'entropy', 'gradient_energy',
-        #     'mean_brightness', 'sharpness', 'dynamic_range',
-        #     'snr', 'median_brightness',
-        #     'motion_magnitude', 'delta_dx', 'delta_dy',
-        #     'delta_response', 'delta_entropy',
-        #     'delta_gradient_energy', 'delta_sharpness',
-        #     'delta_motion_mag'
-        # ]
-        
-        # metric_fields.extend(['psnr', 'ssim', 'ms_ssim', 'vif', 'fsim'])
 
         results = compute_derivatives(results)
-        # results = normalize_results(results, metric_fields)
 
         results.sort(key=lambda x: x['angle'])
 
@@ -273,7 +244,7 @@ def main():
         )
 
         # Сохраняем в CSV
-        output_csv = os.path.join(ANGLES_DIR, f"{root}.csv")
+        output_csv = os.path.join(PARAMS_DIR, f"{root.split('\\')[-1]}.csv")
         with open(output_csv, 'w', encoding='utf-8') as f:
             f.write(f"{header}\n")
             for r in results:
