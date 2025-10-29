@@ -11,8 +11,8 @@ import piq
 
 
 
-ANGLES_DIR = path[0] + "\\angles\\images"
-PARAMS_DIR = path[0] + "\\angles\\parameters"
+ANGLES_DIR = path[0] + "\\angles_2deg\\images"
+PARAMS_DIR = path[0] + "\\angles_2deg\\parameters"
 img_size = (256, 256)
 
 
@@ -198,9 +198,6 @@ def main():
 
                 # Резкость (через дисперсию лапласиана)
                 lap_var = float(cv2.Laplacian(curr_img, cv2.CV_64F).var())
-
-                # Динамический диапазон (разница между max и min)
-                dynamic_range = float(img_float.max() - img_float.min())
                 
                 snr = compute_snr(img_float)
                 
@@ -223,7 +220,6 @@ def main():
                     'gradient_energy': gradient_energy,
                     'mean_brightness': mean_brightness,
                     'sharpness': lap_var,
-                    'dynamic_range': dynamic_range,
                     'snr': snr,
                     'median_brightness': median_brightness,
                     'psnr': quality_metrics['psnr'],
@@ -239,7 +235,7 @@ def main():
 
         header = (
             "angle,dx,dy,true_dx,true_dy,response,contrast,entropy,gradient_energy,mean_brightness,median_brightness,"
-            "sharpness,dynamic_range,snr,motion_magnitude,delta_dx,delta_dy,delta_response,delta_entropy,"
+            "sharpness,snr,motion_magnitude,delta_dx,delta_dy,delta_response,delta_entropy,"
             "delta_gradient_energy,delta_sharpness,delta_motion_mag,psnr,ssim,ms_ssim,vif,fsim\n"
         )
 
@@ -251,8 +247,7 @@ def main():
                 f.write(
                     f"{r['angle']:.2f},{r['dx']:.3f},{r['dy']:.3f},{r['true_dx']:.3f},{r['true_dy']:.3f},{r['response']:.3f},"
                     f"{r['contrast']:.3f},{r['entropy']:.3f},{r['gradient_energy']:.3f},"
-                    f"{r['mean_brightness']:.3f},{r['median_brightness']:.3f},{r['sharpness']:.3f},"
-                    f"{r['dynamic_range']:.3f},{r['snr']:.3f},"
+                    f"{r['mean_brightness']:.3f},{r['median_brightness']:.3f},{r['sharpness']:.3f},{r['snr']:.3f},"
                     f"{r['motion_magnitude']:.3f},{r['delta_dx']:.3f},{r['delta_dy']:.3f},{r['delta_response']:.3f},"
                     f"{r['delta_entropy']:.3f},{r['delta_gradient_energy']:.3f},{r['delta_sharpness']:.3f},{r['delta_motion_mag']:.3f},"
                     f"{r['psnr']:.3f},{r['ssim']:.3f},{r['ms_ssim']:.3f},{r['vif']:.3f},{r['fsim']:.3f}\n"

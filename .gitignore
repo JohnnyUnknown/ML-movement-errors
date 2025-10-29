@@ -2,9 +2,9 @@
 /shelf/
 __pycache__
 old
-angles
-angles2
-angles5
+angles_shifts
+angles_2deg
+angles_5deg
 graphics
 *.jpg
 /workspace.xml
