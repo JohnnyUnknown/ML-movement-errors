@@ -31,7 +31,7 @@ def measurement_deviations(all_data, delta = 1):
         (df['dy'] >= low_dy) & (df['dy'] <= high_dy)
     )
     error_percent = round((1 - df[mask].shape[0] / len(all_data)) * 100, 2)
-    print("Процент отклонений > 1px корреляц. метода по осям:", error_percent, "%")
+    print(f"Процент отклонений > {delta}px корреляц. метода по осям:", error_percent, "%")
 
     return df[mask], error_percent
 
@@ -43,6 +43,39 @@ def get_deviation_data(all_data, clear_data):
     return emis_corr_data
 
 
+def prediction_analysis(y_test, y_pred, test_index):
+    """ Вывод количества и процент предсказаний ухудшающих значения смещений. 
+        Функция считает за ошибку предсказания если:
+        - у истинного и предсказанного значения разные знаки;
+        - предсказанное значение в два и более раза больше истинного;
+        - истинное значение == 0, а предсказанное не в диапазоне [-0.5; 0.5] (delta)."""
+    
+    y_pred = pd.DataFrame(y_pred, index=test_index, columns=['dev_dx', 'dev_dy'])
+    out_errors = []
+    coef = 2
+    for i in test_index:
+        pred_dev_x, true_dev_x = round(y_pred.loc[i, 'dev_dx'], 1), round(y_test.loc[i, 'deviation_dx'], 1)
+        pred_dev_y, true_dev_y = round(y_pred.loc[i, 'dev_dy'], 1), round(y_test.loc[i, 'deviation_dy'], 1)
+
+        if ((true_dev_x < 0 and pred_dev_x > 0) or 
+            (true_dev_x > 0 and pred_dev_x < 0) or
+            (true_dev_y < 0 and pred_dev_y > 0) or 
+            (true_dev_y > 0 and pred_dev_y < 0) or
+            (true_dev_x < 0 and pred_dev_x < true_dev_x * coef) or 
+            (true_dev_x > 0 and pred_dev_x > true_dev_x * coef) or
+            (true_dev_y < 0 and pred_dev_y < true_dev_y * coef) or 
+            (true_dev_y > 0 and pred_dev_y > true_dev_y * coef) or 
+            (true_dev_x == 0 and pred_dev_x >= delta) or 
+            (true_dev_y == 0 and pred_dev_y >= delta) or 
+            (true_dev_x == 0 and pred_dev_x <= -delta) or 
+            (true_dev_y == 0 and pred_dev_y <= -delta)
+            ):
+            out_errors.append([i, round(y_test.loc[i, :], 1).values, round(y_pred.loc[i, :], 1).values])
+    # print(*out_errors, sep="\n")
+    print("\nКоличество предсказаний, ухудшающих ошибку смещения:", len(out_errors), 
+        "\nПроцент ухудшающих предсказаний:", round(len(out_errors) / len(test_index) * 100, 2), "%")
+
+
 def bayes_opt(X_train, y_train):
     def multioutput_mae(y_true, y_pred):
         return np.mean(np.abs(y_true - y_pred))
@@ -50,7 +83,7 @@ def bayes_opt(X_train, y_train):
     mae_scorer = make_scorer(multioutput_mae, greater_is_better=False)
     def objective(trial):
         params = {
-            "n_estimators": trial.suggest_int("n_estimators", 100, 500),
+            "n_estimators": trial.suggest_int("n_estimators", 40, 300),
             "max_depth": trial.suggest_int("max_depth", 3, 10),
             "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
             "subsample": trial.suggest_float("subsample", 0.6, 1.0),
@@ -78,14 +111,14 @@ path_dir = Path(path[0])
 all_data = pd.read_csv((path_dir / "angles_2deg\\combined_data_2deg.csv"))
 delta = 0.5
 
-X, y = get_selected_params(method="AVG", num_of_params=7, show_img=False, save_img=False)
+X, y = get_selected_params(method="AVG", num_of_params=8, show_img=False, save_img=False)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=2)
 test_index = list(y_test.index)
 
 
 # # Оптимизация гиперпараметров моделей
-# bayes_opt(X.loc[:, params], y)
+# bayes_opt(X, y)
 
 # for num in range(50, 150, 10):
 #     model = RandomForestRegressor(n_estimators=num)
@@ -96,10 +129,10 @@ test_index = list(y_test.index)
 #     print(f"{num}: Avg MSE (dx & dy) = {-scores_mse.mean():.4f} ± {scores_mse.std():.4f}")
 
 
-model = RandomForestRegressor(n_estimators=100, random_state=42)
-# model = XGBRegressor(n_estimators=200, random_state=42, n_jobs=-1)
-# model = XGBRegressor(n_estimators=342, max_depth=7, learning_rate=0.097, 
-#                       random_state=42, subsample=0.94, colsample_bytree=0.64)
+model = RandomForestRegressor(n_estimators=50, random_state=42)
+# model = XGBRegressor(n_estimators=70, random_state=42, n_jobs=-1)
+# model = XGBRegressor(n_estimators=105, max_depth=8, learning_rate=0.0156, 
+#                       random_state=42, subsample=0.9937, colsample_bytree=0.6544)
 
 multi_model = MultiOutputRegressor(model)
 # multi_model = load("model_2.joblib")
@@ -117,9 +150,14 @@ y_pred = multi_model.predict(X_test)
 corr = X_test.loc[:, ['dx', 'dy']]
 true_shift = all_data.loc[test_index, ['true_dx', 'true_dy']]
 mae_corr = mean_absolute_error(true_shift, corr)
-print(f"MAE до коррекции: {mae_corr:.5f} пикселей")
+print(y_test.describe().transpose())
+print(f"MAE до коррекции: {mae_corr:.5f} пикселей\n")
+
+delta_corr_ML = pd.concat((round(true_shift['true_dx'] - corr['dx'] - y_pred[:, 0], 3), 
+                           round(true_shift['true_dy'] - corr['dy'] - y_pred[:, 1], 3)), axis=1)
+print(delta_corr_ML.describe().transpose())
 mae = mean_absolute_error(true_shift, corr + y_pred, multioutput='uniform_average')
-print(f"Средняя MAE после коррекции: {mae:.3f} пикселей")
+print(f"Средняя MAE после коррекции: {mae:.3f} пикселей\n")
 
 
 # Добавление к тестовым данным столбцов с истинными смещениями для анализа отклонений
@@ -142,31 +180,7 @@ emis_data_ML, err_emis_ML = measurement_deviations(data, delta)
 emiss_err_ML = get_deviation_data(all_data=data, clear_data=emis_data_ML)
 
 
-# Вывод предсказаний ухудшающих значения смещений
-y_pred = pd.DataFrame(y_pred, index=test_index, columns=['dev_dx', 'dev_dy'])
-out_errors = []
-coef = 2
-for i in test_index:
-    pred_dev_x, true_dev_x = round(y_pred.loc[i, 'dev_dx'], 1), round(y_test.loc[i, 'deviation_dx'], 1)
-    pred_dev_y, true_dev_y = round(y_pred.loc[i, 'dev_dy'], 1), round(y_test.loc[i, 'deviation_dy'], 1)
-
-    if ((true_dev_x < 0 and pred_dev_x > 0) or 
-        (true_dev_x > 0 and pred_dev_x < 0) or
-        (true_dev_y < 0 and pred_dev_y > 0) or 
-        (true_dev_y > 0 and pred_dev_y < 0) or
-        (true_dev_x < 0 and pred_dev_x < true_dev_x * coef) or 
-        (true_dev_x > 0 and pred_dev_x > true_dev_x * coef) or
-        (true_dev_y < 0 and pred_dev_y < true_dev_y * coef) or 
-        (true_dev_y > 0 and pred_dev_y > true_dev_y * coef) or 
-        (true_dev_x == 0 and pred_dev_x >= delta) or 
-        (true_dev_y == 0 and pred_dev_y >= delta) or 
-        (true_dev_x == 0 and pred_dev_x <= -delta) or 
-        (true_dev_y == 0 and pred_dev_y <= -delta)
-        ):
-        out_errors.append([i, round(y_test.loc[i, :], 1).values, round(y_pred.loc[i, :], 1).values])
-# print(*out_errors, sep="\n")
-print("\nКоличество предсказаний, ухудшающих ошибку смещения:", len(out_errors), 
-      "\nПроцент плохих предсказаний:", len(out_errors) / len(test_index))
+prediction_analysis(y_test, y_pred, test_index)
 
 
 # Отрисовка смещений с ML и без  

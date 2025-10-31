@@ -31,8 +31,8 @@ for file in os.listdir(ANGLES_DIR):
         df_features = df[feature_columns].copy()
         
         # Нахождение отклонений измеренных значений от истинных
-        deviation_dx = round(df_features["true_dx"].abs() - df_features["dx"].abs(), 3)
-        deviation_dy = round(df_features["true_dy"].abs() - df_features["dy"].abs(), 3)
+        deviation_dx = round(df_features["true_dx"].abs() - df_features["dx"].abs(), 5)
+        deviation_dy = round(df_features["true_dy"].abs() - df_features["dy"].abs(), 5)
 
         # Формирование таргетных столбцов
         df_features.insert(len(df_features.columns), "deviation_dx", deviation_dx)

@@ -20,7 +20,7 @@ def corr_matrix(all_data):
 def PCA_analysis(X, quantity=10, show_img=True, save_img=False):
     pca = PCA()
     pca.fit(X)
-    # Получаем нагрузки (loadings): компоненты × признаки
+    # Получаем собственные векторы
     loadings = pca.components_.T 
 
     # Вклад признаков в PC1 (можно заменить на PC1 + PC2 и т.д.)
@@ -189,8 +189,13 @@ def get_selected_params(method="AVG", num_of_params=10, show_img=False, save_img
         print("Ошибка. Выбран метод отбора признаков по умолчанию!")
         params = AVG_analysis(X, y, quantity=num_of_params, show_img=show_img, save_img=save_img)
 
+    # Оптимальные параметры, определенные эмпирически
+    print("Выбраны параметры:", params)
+    params = ['angle', 'dx', 'dy', 'sharpness', 'entropy', 'snr', 'mean_brightness']
+
     # Отбор и возврат наиболее значимых параметров
     return X.loc[:, params], y
 
 
 path_dir = Path(path[0])
+# get_selected_params()
