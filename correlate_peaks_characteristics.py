@@ -95,26 +95,6 @@ def split_images_into_tiles(img1, img2, grid_size=(3, 3)):
     return tiles1, tiles2, (tile_h, tile_w)
 
 
-
-    if img1.shape != img2.shape:
-        raise ValueError("Same shape for obj")
-    
-    hann_window = np.outer(
-        np.hanning(img1.shape[0]),
-        np.hanning(img1.shape[1])
-    )
-    img1_float = img1.astype(np.float32)*hann_window
-    img2_float = img2.astype(np.float32)*hann_window
-    
-    fft1 = np.fft.fft2(img1_float)
-    fft2 = np.fft.fft2(img2_float)
-    
-    cross_spectrum = np.conjugate(fft2) * fft1
-    
-    cross_spectrum_normalized = cross_spectrum / (np.abs(cross_spectrum) + 1e-10)
-    bfft = np.fft.ifft2(cross_spectrum_normalized)
-    return np.fft.ifftshift(bfft.real)
-
 def find_shift(h):
     ind = np.unravel_index(np.argmax(h, axis=None), h.shape)
     return ind
@@ -152,11 +132,11 @@ def calculate_correlation_for_tiles(tiles1, tiles2):
     sample_tile1 = tiles1[0][0]
     sample_tile2 = tiles2[0][0]
     sample_correlation = calculate_phase_correlation(sample_tile1, sample_tile2)
-    print("Тип:", sample_correlation.dtype)
-    print("Минимум:", sample_correlation.min())
-    print("Максимум:", sample_correlation.max())
-    print("Среднее:", sample_correlation.mean())
-    print("Медиана фона (без пика):", np.median(sample_correlation))
+    # print("Тип:", sample_correlation.dtype)
+    # print("Минимум:", sample_correlation.min())
+    # print("Максимум:", sample_correlation.max())
+    # print("Среднее:", sample_correlation.mean())
+    # print("Медиана фона (без пика):", np.median(sample_correlation))
     tile_corr_h, tile_corr_w = sample_correlation.shape
     combined_correlation = np.zeros((grid_rows * tile_corr_h, grid_cols * tile_corr_w))
     
@@ -208,9 +188,9 @@ def calculate_pce(correlation):
     
     # PCE = (peak^2) / (средняя энергия фона)
     pce = (peak_value ** 2) / (np.mean(background ** 2) + 1e-10)    
-    print(f"Пик: {peak_value:.6f}")
-    print(f"Энергия фона: {np.mean(background ** 2):.2e}")
-    print(f"PCE: {pce:.2e}")
+    # print(f"Пик: {peak_value:.6f}")
+    # print(f"Энергия фона: {np.mean(background ** 2):.2e}")
+    # print(f"PCE: {pce:.2e}")
     return pce
 
 def extract_tails_info(shifts):
@@ -280,36 +260,36 @@ def main():
             results.append(res)
             # print(results)
 
-        # all_res.sort(key=lambda x: x['angle'])
+        results.sort(key=lambda x: x['angle'])
 
-    #     header = (
-    #         "angle,true_dx,true_dy,"
-    #         "0_0_dx,0_0_dy,0_0_PCE,0_0_resp,0_1_dx,0_1_dy,0_1_PCE,0_1_resp,0_2_dx,0_2_dy,0_2_PCE,0_2_resp,"
-    #         "1_0_dx,1_0_dy,1_0_PCE,1_0_resp,1_1_dx,1_1_dy,1_1_PCE,1_1_resp,1_2_dx,1_2_dy,1_2_PCE,1_2_resp,"
-    #         "2_0_dx,2_0_dy,2_0_PCE,2_0_resp,2_1_dx,2_1_dy,2_1_PCE,2_1_resp,2_2_dx,2_2_dy,2_2_PCE,2_2_resp\n"
-    #     )
+        header = (
+            "angle,true_dx,true_dy,"
+            "0_0_dx,0_0_dy,0_0_PCE,0_0_resp,0_1_dx,0_1_dy,0_1_PCE,0_1_resp,0_2_dx,0_2_dy,0_2_PCE,0_2_resp,"
+            "1_0_dx,1_0_dy,1_0_PCE,1_0_resp,1_1_dx,1_1_dy,1_1_PCE,1_1_resp,1_2_dx,1_2_dy,1_2_PCE,1_2_resp,"
+            "2_0_dx,2_0_dy,2_0_PCE,2_0_resp,2_1_dx,2_1_dy,2_1_PCE,2_1_resp,2_2_dx,2_2_dy,2_2_PCE,2_2_resp\n"
+        )
 
-    #     # Сохраняем в CSV
-    #     output_csv = os.path.join(PARAMS_DIR, f"{root.split('\\')[-1]}.csv")
-    #     with open(output_csv, 'w', encoding='utf-8') as f:
-    #         f.write(f"{header}\n")
-    #         for r in results:
-    #             f.write(
-    #                 f"{r['angle']:.2f},{r['true_dx']:.3f},{r['true_dy']:.3f},"
-    #                 f"{r['0_0_dx']:.3f},{r['0_0_dy']:.3f},{r['0_0_PCE']:.3f},{r['0_0_resp']:.6f},"
-    #                 f"{r['0_1_dx']:.3f},{r['0_1_dy']:.3f},{r['0_1_PCE']:.3f},{r['0_1_resp']:.6f},"
-    #                 f"{r['0_2_dx']:.3f},{r['0_2_dy']:.3f},{r['0_2_PCE']:.3f},{r['0_2_resp']:.6f},"
-    #                 f"{r['1_0_dx']:.3f},{r['1_0_dy']:.3f},{r['1_0_PCE']:.3f},{r['1_0_resp']:.6f},"
-    #                 f"{r['1_1_dx']:.3f},{r['1_1_dy']:.3f},{r['1_1_PCE']:.3f},{r['1_1_resp']:.6f},"
-    #                 f"{r['1_2_dx']:.3f},{r['1_2_dy']:.3f},{r['1_2_PCE']:.3f},{r['1_2_resp']:.6f},"
-    #                 f"{r['2_0_dx']:.3f},{r['2_0_dy']:.3f},{r['2_0_PCE']:.3f},{r['2_0_resp']:.6f},"
-    #                 f"{r['2_1_dx']:.3f},{r['2_1_dy']:.3f},{r['2_1_PCE']:.3f},{r['2_1_resp']:.6f},"
-    #                 f"{r['2_2_dx']:.3f},{r['2_2_dy']:.3f},{r['2_2_PCE']:.3f},{r['2_2_resp']:.6f}\n"
-    #             )
+        # Сохраняем в CSV
+        output_csv = os.path.join(PARAMS_DIR, f"{root.split('\\')[-1]}.csv")
+        with open(output_csv, 'w', encoding='utf-8') as f:
+            f.write(f"{header}\n")
+            for r in results:
+                f.write(
+                    f"{r['angle']:.2f},{r['true_dx']:.3f},{r['true_dy']:.3f},"
+                    f"{r['0_0_dx']:.3f},{r['0_0_dy']:.3f},{r['0_0_PCE']:.3f},{r['0_0_resp']:.6f},"
+                    f"{r['0_1_dx']:.3f},{r['0_1_dy']:.3f},{r['0_1_PCE']:.3f},{r['0_1_resp']:.6f},"
+                    f"{r['0_2_dx']:.3f},{r['0_2_dy']:.3f},{r['0_2_PCE']:.3f},{r['0_2_resp']:.6f},"
+                    f"{r['1_0_dx']:.3f},{r['1_0_dy']:.3f},{r['1_0_PCE']:.3f},{r['1_0_resp']:.6f},"
+                    f"{r['1_1_dx']:.3f},{r['1_1_dy']:.3f},{r['1_1_PCE']:.3f},{r['1_1_resp']:.6f},"
+                    f"{r['1_2_dx']:.3f},{r['1_2_dy']:.3f},{r['1_2_PCE']:.3f},{r['1_2_resp']:.6f},"
+                    f"{r['2_0_dx']:.3f},{r['2_0_dy']:.3f},{r['2_0_PCE']:.3f},{r['2_0_resp']:.6f},"
+                    f"{r['2_1_dx']:.3f},{r['2_1_dy']:.3f},{r['2_1_PCE']:.3f},{r['2_1_resp']:.6f},"
+                    f"{r['2_2_dx']:.3f},{r['2_2_dy']:.3f},{r['2_2_PCE']:.3f},{r['2_2_resp']:.6f}\n"
+                )
                 
-    #     print(f"✅ Обработано: {os.path.basename(root)} → {len(results)} изображений, сохранено в {output_csv}")
+        print(f"✅ Обработано: {os.path.basename(root)} → {len(results)} изображений, сохранено в {output_csv}")
 
-    # print("🎉 Все папки обработаны!")
+    print("🎉 Все папки обработаны!")
 
 if __name__ == "__main__":
     main()

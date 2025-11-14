@@ -6,14 +6,14 @@ from joblib import dump, load
 from sklearn.ensemble import RandomForestRegressor, StackingRegressor
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.model_selection import train_test_split, cross_val_score, learning_curve
-from sklearn.metrics import mean_absolute_error, make_scorer
+from sklearn.metrics import mean_absolute_error, make_scorer, mean_squared_error
 from sklearn.neural_network import MLPRegressor
 from sklearn.linear_model import LinearRegression
 from sys import path
 import optuna
 from xgboost import XGBRegressor
 from catboost import CatBoostRegressor
-from EDA import get_selected_params
+from EDA_peaks import get_selected_params
 
 
 def measurement_deviations(all_data, delta = 1):
@@ -273,15 +273,13 @@ def plot_error_vs_angle(
     plt.show()
 
 
-
-
 path_dir = Path(path[0])
-all_data = pd.read_csv((path_dir / "angles_2\\combined_data.csv"))
-delta = 0.5
+all_data = pd.read_csv((path_dir / "angles\\combined_data.csv"))
+delta = 1
 
-X, y = get_selected_params(method="AVG", num_of_params=8, show_img=False, save_img=False)
+X, y = get_selected_params()
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 test_index = list(y_test.index)
 
 
@@ -318,7 +316,7 @@ y_pred = multi_model.predict(X_test)
 # dump(multi_model, 'model_2.joblib')
 
 
-# Сравнение истииных отклонений с измеренными до правки и после 
+# Сравнение истинных отклонений с измеренными до правки и после 
 corr = X_test.loc[:, ['dx', 'dy']]
 true_shift = all_data.loc[test_index, ['true_dx', 'true_dy']]
 mae_corr = mean_absolute_error(true_shift, corr)
@@ -326,9 +324,9 @@ print(round(y_test.describe().transpose(), 4))
 print(f"MAE до коррекции: {mae_corr:.5f} пикселей\n")
 
 delta_corr_ML = y_test - y_pred
-print(round(delta_corr_ML.describe().transpose(), 4))
 new_corr = corr + y_pred
-mae = mean_absolute_error(true_shift, new_corr)
+print(round(delta_corr_ML.describe().transpose(), 4))
+mae = mean_absolute_error(true_shift, new_corr, multioutput='uniform_average')
 print(f"Средняя MAE после коррекции: {mae:.5f} пикселей\n")
 
 
@@ -382,4 +380,3 @@ plot_error_vs_angle(all_data.loc[test_index, "angle"],
 # axs[4].set(title=f"True", xlim=limit, ylim=limit)
 # # plt.savefig((path_dir / f"graphics\\ML_SBS_{len(SBS_analysis())}.jpg"), dpi=800)
 # plt.show()
-
