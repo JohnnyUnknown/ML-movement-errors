@@ -3,14 +3,16 @@ import numpy as np
 from pathlib import Path
 import pandas as pd
 from joblib import dump, load
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, StackingRegressor
 from sklearn.multioutput import MultiOutputRegressor
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, learning_curve
 from sklearn.metrics import mean_absolute_error, make_scorer
 from sklearn.neural_network import MLPRegressor
+from sklearn.linear_model import LinearRegression
 from sys import path
 import optuna
 from xgboost import XGBRegressor
+from catboost import CatBoostRegressor
 from EDA import get_selected_params
 
 
@@ -44,7 +46,7 @@ def get_deviation_data(all_data, clear_data):
 
 
 def prediction_analysis(y_test, y_pred, test_index):
-    """ Вывод количества и процент предсказаний ухудшающих значения смещений. 
+    """ Вывод количества и процента предсказаний ухудшающих значения смещений. 
         Функция считает за ошибку предсказания если:
         - у истинного и предсказанного значения разные знаки;
         - предсказанное значение в два и более раза больше истинного;
@@ -108,12 +110,12 @@ def bayes_opt(X_train, y_train):
 
 
 path_dir = Path(path[0])
-all_data = pd.read_csv((path_dir / "angles_2deg\\combined_data_2deg.csv"))
+all_data = pd.read_csv((path_dir / "angles_2\\combined_data.csv"))
 delta = 0.5
 
 X, y = get_selected_params(method="AVG", num_of_params=8, show_img=False, save_img=False)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=2)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 test_index = list(y_test.index)
 
 
@@ -123,16 +125,18 @@ test_index = list(y_test.index)
 # for num in range(50, 150, 10):
 #     model = RandomForestRegressor(n_estimators=num)
 #     multi_model = MultiOutputRegressor(model)
-#     scores_mae = cross_val_score(multi_model, X.loc[:, params], y, cv=3, scoring='neg_mean_absolute_error')
-#     scores_mse = cross_val_score(multi_model, X.loc[:, params], y, cv=3, scoring='neg_mean_squared_error')
+#     scores_mae = cross_val_score(multi_model, X, y, cv=5, scoring='neg_mean_absolute_error')
+#     scores_mse = cross_val_score(multi_model, X, y, cv=5, scoring='neg_mean_squared_error')
 #     print(f"{num}: Avg MAE (dx & dy) = {-scores_mae.mean():.4f} ± {scores_mae.std():.4f}")
 #     print(f"{num}: Avg MSE (dx & dy) = {-scores_mse.mean():.4f} ± {scores_mse.std():.4f}")
 
 
-model = RandomForestRegressor(n_estimators=50, random_state=42)
+model = RandomForestRegressor(n_estimators=80, min_samples_split=3, random_state=42)
+# model = CatBoostRegressor(iterations=500, depth=6, learning_rate=0.1, loss_function='MAE')
 # model = XGBRegressor(n_estimators=70, random_state=42, n_jobs=-1)
 # model = XGBRegressor(n_estimators=105, max_depth=8, learning_rate=0.0156, 
 #                       random_state=42, subsample=0.9937, colsample_bytree=0.6544)
+
 
 multi_model = MultiOutputRegressor(model)
 # multi_model = load("model_2.joblib")
@@ -140,8 +144,10 @@ multi_model = MultiOutputRegressor(model)
 
 multi_model.fit(X_train, y_train)
 y_pred = multi_model.predict(X_test)
+# print(cross_val_score(multi_model, X, y, scoring='neg_mean_absolute_error'))
 
-# # Сохранение модели
+
+# # Сохранение модели (обучение на полном наборе данных)
 # multi_model.fit(np.array(X), y)
 # dump(multi_model, 'model_2.joblib')
 

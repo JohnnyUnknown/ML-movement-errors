@@ -9,7 +9,7 @@ RAW_DIR = Path(path[0] + "\\raw")
 ANGLES_DIR = Path(path[0] + "\\angles\\images")
 
 # Параметры
-CROP_SIZE = 256
+CROP_SIZE = 600
 MAX_OFFSET = 15.0  # пикселей
 NUM_CROPS = 100
 

@@ -9,10 +9,10 @@ RAW_DIR = Path(path[0] + "\\raw")
 ANGLES_DIR = Path(path[0] + "\\angles\\images")
 
 # Параметры
-CROP_SIZE = 256
-MAX_OFFSET = 15.0      # пикселей
-MAX_ANGLE = 2.0        # градусов
-NUM_CROPS = 100
+CROP_SIZE = 600
+MAX_OFFSET = 10.0      # пикселей
+MAX_ANGLE = 3.0        # градусов
+NUM_CROPS = 150
 
 # Поддерживаемые расширения
 SUPPORTED_EXTS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff'}

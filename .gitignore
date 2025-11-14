@@ -2,8 +2,9 @@
 /shelf/
 __pycache__
 old
+angles
 angles_shifts
-angles_2deg
+angles_2
 angles_5deg
 graphics
 *.jpg

@@ -11,8 +11,8 @@ import piq
 
 
 
-ANGLES_DIR = path[0] + "\\angles_2deg\\images"
-PARAMS_DIR = path[0] + "\\angles_2deg\\parameters"
+ANGLES_DIR = path[0] + "\\angles\\images"
+PARAMS_DIR = path[0] + "\\angles\\parameters"
 img_size = (256, 256)
 
 
@@ -131,6 +131,7 @@ def compute_derivatives(results):
 
 
 def main():
+    os.makedirs(PARAMS_DIR, exist_ok=True)
     for root, dirs, files in os.walk(ANGLES_DIR):
         if root == ANGLES_DIR:
             continue

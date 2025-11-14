@@ -7,9 +7,9 @@ from sys import path
 # Конфигурация
 RAW_DIR = Path(path[0] + "\\raw")
 ANGLES_DIR = Path(path[0] + "\\angles\\images")
-CROP_SIZE = 256
-ANGLE_START = -2.0
-ANGLE_END = 2.0
+CROP_SIZE = 600
+ANGLE_START = -3.0
+ANGLE_END = 3.0
 ANGLE_STEP = 0.1
 ANGLES = int((abs(ANGLE_START) + ANGLE_END) / ANGLE_STEP + 1)
 
@@ -18,7 +18,7 @@ SUPPORTED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp'}
 
 def center_crop(img: np.ndarray) -> np.ndarray:
     h, w = img.shape[:2]
-    target = 256
+    target = CROP_SIZE
     # центр изображения
     cy, cx = h // 2, w // 2
     # начальные координаты кропа

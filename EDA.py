@@ -169,7 +169,7 @@ def analysis_data(all_data):
 
 
 def get_selected_params(method="AVG", num_of_params=10, show_img=False, save_img=False):
-    all_data = pd.read_csv((path_dir / "angles_2deg\\combined_data_2deg.csv"))
+    all_data = pd.read_csv((path_dir / "angles_2\\combined_data.csv"))
 
     # analysis_data(all_data)
 
@@ -190,8 +190,8 @@ def get_selected_params(method="AVG", num_of_params=10, show_img=False, save_img
         params = AVG_analysis(X, y, quantity=num_of_params, show_img=show_img, save_img=save_img)
 
     # Оптимальные параметры, определенные эмпирически
-    print("Выбраны параметры:", params)
     params = ['angle', 'dx', 'dy', 'sharpness', 'entropy', 'snr', 'mean_brightness']
+    print("Выбраны параметры:", params)
 
     # Отбор и возврат наиболее значимых параметров
     return X.loc[:, params], y
