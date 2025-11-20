@@ -60,8 +60,8 @@ def AVG_analysis(X, y, quantity=10, show_img=True, save_img=False):
     model_y = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
 
     # Обучение
-    model_x.fit(X, y["true_dx"])
-    model_y.fit(X, y["true_dy"])
+    model_x.fit(X, y["deviation_dx"])
+    model_y.fit(X, y["deviation_dy"])
 
     # Получаем важности
     importance_x = model_x.feature_importances_
@@ -96,13 +96,13 @@ def AVG_analysis(X, y, quantity=10, show_img=True, save_img=False):
 
 
 def SBS_analysis(X, y, quantity=10, show_img=True, save_img=False):
-    model_x = RandomForestRegressor(n_estimators=100, random_state=42).fit(X, y["true_dx"])
-    model_y = RandomForestRegressor(n_estimators=100, random_state=42).fit(X, y["true_dy"])
+    model_x = RandomForestRegressor(n_estimators=100, random_state=42).fit(X, y["deviation_dx"])
+    model_y = RandomForestRegressor(n_estimators=100, random_state=42).fit(X, y["deviation_dy"])
 
     if quantity > len(X.columns): 
         quantity = len(X.columns)
-    selector_x = SelectFromModel(model_x, max_features=quantity, threshold=0.001).fit(X, y["true_dx"])
-    selector_y = SelectFromModel(model_y, max_features=quantity, threshold=0.001).fit(X, y["true_dy"])
+    selector_x = SelectFromModel(model_x, max_features=quantity, threshold=0.001).fit(X, y["deviation_dx"])
+    selector_y = SelectFromModel(model_y, max_features=quantity, threshold=0.001).fit(X, y["deviation_dy"])
 
     # selected_features_x = X.columns[selector_x.get_support()].tolist()
     # selected_features_y = X.columns[selector_y.get_support()].tolist()
@@ -196,4 +196,4 @@ def get_selected_params(method=None, num_of_params=10, show_img=False, save_img=
 
 
 path_dir = Path(path[0])
-# get_selected_params()
+# get_selected_params(method="PCA", show_img=True)

@@ -48,7 +48,7 @@ def get_deviation_data(all_data, clear_data):
 def prediction_analysis(y_test, y_pred, test_index):
     """ Вывод количества и процента предсказаний ухудшающих значения смещений. 
         Функция считает за ошибку предсказания если:
-        - у истинного и предсказанного значения разные знаки;
+        - у истинного и предсказанного значения разные знаки, и их сумма по модулю больше 0.5 (delta);
         - предсказанное значение в два и более раза больше истинного;
         - истинное значение == 0, а предсказанное не в диапазоне [-0.5; 0.5] (delta)."""
     
@@ -59,23 +59,23 @@ def prediction_analysis(y_test, y_pred, test_index):
         pred_dev_x, true_dev_x = round(y_pred.loc[i, 'dev_dx'], 1), round(y_test.loc[i, 'deviation_dx'], 1)
         pred_dev_y, true_dev_y = round(y_pred.loc[i, 'dev_dy'], 1), round(y_test.loc[i, 'deviation_dy'], 1)
 
-        if ((true_dev_x < 0 and pred_dev_x > 0) or 
-            (true_dev_x > 0 and pred_dev_x < 0) or
-            (true_dev_y < 0 and pred_dev_y > 0) or 
-            (true_dev_y > 0 and pred_dev_y < 0) or
-            (true_dev_x < 0 and pred_dev_x < true_dev_x * coef) or 
-            (true_dev_x > 0 and pred_dev_x > true_dev_x * coef) or
-            (true_dev_y < 0 and pred_dev_y < true_dev_y * coef) or 
-            (true_dev_y > 0 and pred_dev_y > true_dev_y * coef) or 
-            (true_dev_x == 0 and pred_dev_x >= delta) or 
-            (true_dev_y == 0 and pred_dev_y >= delta) or 
-            (true_dev_x == 0 and pred_dev_x <= -delta) or 
-            (true_dev_y == 0 and pred_dev_y <= -delta)
+        if ((true_dev_x < 0 and pred_dev_x > 0 and (abs(true_dev_x) + abs(pred_dev_x)) > delta) or 
+            (true_dev_x > 0 and pred_dev_x < 0 and (abs(true_dev_x) + abs(pred_dev_x)) > delta) or
+            (true_dev_y < 0 and pred_dev_y > 0 and (abs(true_dev_y) + abs(pred_dev_y)) > delta) or 
+            (true_dev_y > 0 and pred_dev_y < 0 and (abs(true_dev_y) + abs(pred_dev_y)) > delta) or
+            (true_dev_x < 0 and pred_dev_x < (true_dev_x * coef)) or 
+            (true_dev_x > 0 and pred_dev_x > (true_dev_x * coef)) or
+            (true_dev_y < 0 and pred_dev_y < (true_dev_y * coef)) or 
+            (true_dev_y > 0 and pred_dev_y > (true_dev_y * coef)) or 
+            (true_dev_x == 0 and pred_dev_x > delta) or 
+            (true_dev_x == 0 and pred_dev_x < -delta) or 
+            (true_dev_y == 0 and pred_dev_y > delta) or 
+            (true_dev_y == 0 and pred_dev_y < -delta)
             ):
-            out_errors.append([i, round(y_test.loc[i, :], 1).values, round(y_pred.loc[i, :], 1).values])
-    # print(*out_errors, sep="\n")
-    print("\nКоличество предсказаний, ухудшающих ошибку смещения:", len(out_errors), 
-        "\nПроцент ухудшающих предсказаний:", round(len(out_errors) / len(test_index) * 100, 2), "%")
+            out_errors.append([i, round(y_test.loc[i, :], 2).values, round(y_pred.loc[i, :], 2).values])
+    print(f"\nКоличество предсказаний, ухудшающих ошибку смещения: {len(out_errors)} из {len(test_index)}" 
+          f" ({round(len(out_errors) / len(test_index) * 100, 2)} %)\n")
+    print(*out_errors, sep="\n")
 
 
 def bayes_opt(X_train, y_train):
@@ -277,9 +277,14 @@ def plot_error_vs_angle(
 
 path_dir = Path(path[0])
 all_data = pd.read_csv((path_dir / "angles_2\\combined_data.csv"))
+
+# # Данные для работы с тайлами кросс-корреляции
+# from EDA_peaks import get_selected_params
+# all_data = pd.read_csv((path_dir / "angles\\combined_data.csv"))
+
 delta = 0.5
 
-X, y = get_selected_params(method="AVG", num_of_params=8, show_img=False, save_img=False)
+X, y = get_selected_params(method=None, num_of_params=8, show_img=False, save_img=False)
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 test_index = list(y_test.index)
@@ -318,17 +323,17 @@ y_pred = multi_model.predict(X_test)
 # dump(multi_model, 'model_2.joblib')
 
 
-# Сравнение истииных отклонений с измеренными до правки и после 
+# Сравнение истинных отклонений с измеренными до правки и после 
 corr = X_test.loc[:, ['dx', 'dy']]
 true_shift = all_data.loc[test_index, ['true_dx', 'true_dy']]
 mae_corr = mean_absolute_error(true_shift, corr)
 print(round(y_test.describe().transpose(), 4))
 print(f"MAE до коррекции: {mae_corr:.5f} пикселей\n")
 
-delta_corr_ML = y_test - y_pred
-print(round(delta_corr_ML.describe().transpose(), 4))
-new_corr = corr + y_pred
-mae = mean_absolute_error(true_shift, new_corr)
+y_test_ML = y_test - y_pred
+print(round(y_test_ML.describe().transpose(), 4))
+corr_ML = corr + y_pred
+mae = mean_absolute_error(true_shift, corr_ML)
 print(f"Средняя MAE после коррекции: {mae:.5f} пикселей\n")
 
 
@@ -359,27 +364,27 @@ prediction_analysis(y_test, y_pred, test_index)
 
 plot_displacement_scatter(true_shift["true_dx"], true_shift['true_dy'], 
                           corr["dx"], corr["dy"],
-                          new_corr["dx"], new_corr["dy"])
+                          corr_ML["dx"], corr_ML["dy"])
 plot_error_vs_angle(all_data.loc[test_index, "angle"],
                     true_shift["true_dx"], true_shift['true_dy'], 
                     corr["dx"], corr["dy"],
-                    new_corr["dx"], new_corr["dy"])
+                    corr_ML["dx"], corr_ML["dy"])
 
 
-# # Отрисовка смещений с ML и без  
-# limit = [-25, 25]
-# fig = plt.figure(figsize=(14, 6))
-# axs = fig.subplots(1, 5)
-# axs[0].scatter(emis_data["dx"].values, emis_data["dy"].values)
-# axs[0].set(title=f"Corr emission", xlim=limit, ylim=limit)
-# axs[1].scatter(emiss_err["dx"].values, emiss_err["dy"].values)
-# axs[1].set(title=f"Errors {err_emis}%", xlim=limit, ylim=limit)
-# axs[2].scatter(emis_data_ML["dx"].values, emis_data_ML["dy"].values)
-# axs[2].set(title=f"Corr with ML", xlim=limit, ylim=limit)
-# axs[3].scatter(emiss_err_ML["dx"].values, emiss_err_ML["dy"].values)
-# axs[3].set(title=f"Errors with ML {err_emis_ML}%", xlim=limit, ylim=limit) 
-# axs[4].scatter(all_data.loc[test_index, "true_dx"].values, all_data.loc[test_index, "true_dy"].values)
-# axs[4].set(title=f"True", xlim=limit, ylim=limit)
-# # plt.savefig((path_dir / f"graphics\\ML_SBS_{len(SBS_analysis())}.jpg"), dpi=800)
-# plt.show()
+# Отрисовка смещений с ML и без  
+limit = [-25, 25]
+fig = plt.figure(figsize=(14, 6))
+axs = fig.subplots(1, 5)
+axs[0].scatter(emis_data["dx"].values, emis_data["dy"].values)
+axs[0].set(title=f"Corr emission", xlim=limit, ylim=limit)
+axs[1].scatter(emiss_err["dx"].values, emiss_err["dy"].values)
+axs[1].set(title=f"Errors {err_emis}%", xlim=limit, ylim=limit)
+axs[2].scatter(emis_data_ML["dx"].values, emis_data_ML["dy"].values)
+axs[2].set(title=f"Corr with ML", xlim=limit, ylim=limit)
+axs[3].scatter(emiss_err_ML["dx"].values, emiss_err_ML["dy"].values)
+axs[3].set(title=f"Errors with ML {err_emis_ML}%", xlim=limit, ylim=limit) 
+axs[4].scatter(all_data.loc[test_index, "true_dx"].values, all_data.loc[test_index, "true_dy"].values)
+axs[4].set(title=f"True", xlim=limit, ylim=limit)
+# plt.savefig((path_dir / f"graphics\\ML_SBS_{len(SBS_analysis())}.jpg"), dpi=800)
+plt.show()
 

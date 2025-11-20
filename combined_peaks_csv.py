@@ -35,8 +35,10 @@ for file in os.listdir(ANGLES_DIR):
             resp_list = df.loc[i:, ["0_0_resp","0_1_resp","0_2_resp","1_0_resp","1_1_resp","1_2_resp","2_0_resp","2_1_resp","2_2_resp"]]
             
             weights = np.array(pce_list)
-            dx_est = np.average(dx_list, weights=weights)
-            dy_est = np.average(dy_list, weights=weights)
+            # dx_est = np.average(dx_list, weights=weights)
+            # dy_est = np.average(dy_list, weights=weights)
+            dx_est = np.mean(dx_list)
+            dy_est = np.mean(dy_list)
 
             dx.append(round(dx_est-100, 3))
             dy.append(round(dy_est-100, 3))
