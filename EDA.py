@@ -186,12 +186,11 @@ def get_selected_params(method="AVG", num_of_params=10, show_img=False, save_img
         if method == 'SBS':
             params = SBS_analysis(X, y, quantity=num_of_params, show_img=show_img, save_img=save_img)
     else:
-        print("Ошибка. Выбран метод отбора признаков по умолчанию!")
-        params = AVG_analysis(X, y, quantity=num_of_params, show_img=show_img, save_img=save_img)
-
-    # Оптимальные параметры, определенные эмпирически
-    params = ['angle', 'dx', 'dy', 'sharpness', 'entropy', 'snr', 'mean_brightness']
-    print("Выбраны параметры:", params)
+        # print("Выбран метод отбора признаков по умолчанию!")
+        # params = AVG_analysis(X, y, quantity=num_of_params, show_img=show_img, save_img=save_img)
+        # Оптимальные параметры, определенные эмпирически
+        params = ['angle', 'dx', 'dy', 'sharpness', 'entropy', 'snr', 'mean_brightness']
+        print("Выбраны параметры:", params)
 
     # Отбор и возврат наиболее значимых параметров
     return X.loc[:, params], y

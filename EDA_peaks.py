@@ -185,6 +185,7 @@ def get_selected_params(method=None, num_of_params=10, show_img=False, save_img=
         if method == 'SBS':
             params = SBS_analysis(X, y, quantity=num_of_params, show_img=show_img, save_img=save_img)
     else:
+        print("Выбраны признаки по умолчанию!")
         return X, y
 
     # Оптимальные параметры, определенные эмпирически
