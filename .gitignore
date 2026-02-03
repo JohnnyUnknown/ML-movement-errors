@@ -1,11 +1,8 @@
 # Default ignored files
 /shelf/
 __pycache__
-old
-angles
-angles_shifts
-angles_2
-angles_5deg
-graphics
-*.jpg
+correlation_peak_method
+old_scripts
+images
+parameters
 /workspace.xml
